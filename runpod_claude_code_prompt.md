@@ -4,10 +4,13 @@ Copy everything below the line into a Claude Code session running on the RunPod 
 
 Pod assumptions (set these up before starting Claude Code):
 - GPU pod with 1–2× A100 80GB or H100 80GB (a 3B model fits easily on one GPU; a second GPU roughly halves generation time via the pipeline's multi-worker mode), ≥200GB volume mounted at `/workspace`.
-- A `.env` file copied into the cloned repo root at `/workspace/assistant-axis/.env` containing the OpenRouter credentials for the LLM judge (the judge uses the openai SDK pointed at OpenRouter; `load_dotenv()` in the pipeline picks this file up automatically):
+- A `.env` file copied (scp, not git — it holds live keys) into `/workspace/sprint/assistant-axis/.env`, containing the OpenRouter credentials for the LLM judge (the judge uses the openai SDK pointed at OpenRouter; `load_dotenv()` in the pipeline picks this file up automatically) plus HF creds:
   ```
-  OPENAI_API_KEY=sk-or-...        # OpenRouter key
+  OPENAI_API_KEY=sk-or-...        # OpenRouter key (the SDK reads this name)
   OPENAI_BASE_URL=https://openrouter.ai/api/v1
+  OPENROUTER_API_KEY=sk-or-...    # same key, labeled
+  HF_TOKEN=hf_...
+  HF_ORG=timf34
   ```
 - Docker image with CUDA + Python 3.10+ (any standard RunPod PyTorch image works; the repo installs its own deps via `uv`).
 
@@ -34,16 +37,16 @@ Known model facts (verified from the model cards — re-verify locally):
 
 ## Setup
 
-1. Clone and install:
+1. Clone and install. The assistant-axis code is **vendored inside the sprint repo** (see `assistant-axis/UPSTREAM.md` for upstream provenance) — clone the sprint repo, not the original safety-research repo, so our modifications are included:
    ```bash
    cd /workspace
-   git clone https://github.com/safety-research/assistant-axis.git
-   cd assistant-axis
+   git clone https://github.com/timf34/SynthenticPersonaPretrainingSprint.git sprint
+   cd sprint/assistant-axis
    uv sync
    ```
-2. Confirm `.env` exists in the repo root with a non-empty `OPENAI_API_KEY` (OpenRouter key) and `OPENAI_BASE_URL=https://openrouter.ai/api/v1` — fail fast if not, and verify the judge path early with a one-off API call through the OpenRouter base URL to `openai/gpt-4.1-mini`. Only the judge scripts auto-load `.env`; every shell/tmux session (including `overnight.sh`) must start with `set -a; source /workspace/assistant-axis/.env; set +a` so `HF_TOKEN` and the judge vars are exported for all steps. Check GPU count with `nvidia-smi` and free disk (need ~30GB for activations per model, plus HF cache).
+2. Confirm `.env` exists in the repo root with a non-empty `OPENAI_API_KEY` (OpenRouter key) and `OPENAI_BASE_URL=https://openrouter.ai/api/v1` — fail fast if not, and verify the judge path early with a one-off API call through the OpenRouter base URL to `openai/gpt-4.1-mini`. Only the judge scripts auto-load `.env`; every shell/tmux session (including `overnight.sh`) must start with `set -a; source /workspace/sprint/assistant-axis/.env; set +a` so `HF_TOKEN` and the judge vars are exported for all steps. There are NO OpenAI credits — all judge traffic must go through OpenRouter; if any judge call errors against `api.openai.com`, env loading broke: stop and fix it, don't retry. Check GPU count with `nvidia-smi` and free disk (need ~30GB for activations per model, plus HF cache).
 3. Install tmux if absent. All long-running work goes in tmux, never in your foreground shell.
-4. Create `/workspace/exp/` as the experiment directory. **The upstream clone is read-only** apart from the gitignored `.env`: all outputs (pass `--output_dir /workspace/exp/<model>/...` to every pipeline step), the `overnight.sh` driver, `analyze_axis.py`, role-subset files, logs, and reports live under `/workspace/exp/`, never inside `assistant-axis/`. Run scripts as `uv run --project /workspace/assistant-axis <script>` (or from within the repo) so the package imports resolve.
+4. Create `/workspace/exp/` as the experiment directory. Keep the vendored `assistant-axis/` code clean: all outputs (pass `--output_dir /workspace/exp/<model>/...` to every pipeline step), the `overnight.sh` driver, `analyze_axis.py`, role-subset files, logs, and reports live under `/workspace/exp/`, never inside `assistant-axis/`. Run scripts as `uv run --project /workspace/sprint/assistant-axis <script>` (or from within that directory) so the package imports resolve.
 
 ## How the pipeline works (already read the code before changing anything)
 
@@ -100,7 +103,7 @@ A headless script `analyze_axis.py` (use `assistant_axis.pca.compute_pca` and `a
 
 ## Working rules
 
-- Prefer flags over code edits. Any repo patch must be minimal, motivated, and listed in RESULTS.md.
+- Prefer flags over code edits. When a code change IS needed, it's allowed (the code is our vendored copy), but keep it minimal, record it in `assistant-axis/UPSTREAM.md`, list it in RESULTS.md, and dump `git diff > /workspace/exp/patches.diff` so it can be committed back to the sprint repo from your machine (the pod has no GitHub push credentials — the HF results upload carries the diff home).
 - Everything long-running goes in tmux; every step logs to a file; every step must be resumable after a crash (the pipeline already supports this — don't break it).
 - Do not wait idle for hours watching a job. Set the driver going, verify it's healthy, and end with a clear summary of: what was launched, where the logs/outputs are, what the morning checklist is (`tmux attach`, check `logs/`, read `RESULTS.md`).
 - If the primary model fails to load in vLLM after 2–3 genuine fix attempts (tokenizer mode, dtype, revision pinning), fall back to `dlab-spp/t0-3b-instruct` and note it.

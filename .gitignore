@@ -1,11 +1,7 @@
-# Secrets — never commit
+# Secrets — never commit (assistant-axis/.env holds live OpenRouter + HF keys)
 .env
 .env.*
 */.env
-
-# Upstream clone (pod clones it fresh from github.com/safety-research/assistant-axis;
-# our .env with live keys lives inside it and is transferred via scp, not git)
-assistant-axis/
 
 # OS noise
 .DS_Store
