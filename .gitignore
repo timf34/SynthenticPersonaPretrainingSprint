@@ -1,0 +1,11 @@
+# Secrets — never commit
+.env
+.env.*
+*/.env
+
+# Upstream clone (pod clones it fresh from github.com/safety-research/assistant-axis;
+# our .env with live keys lives inside it and is transferred via scp, not git)
+assistant-axis/
+
+# OS noise
+.DS_Store
