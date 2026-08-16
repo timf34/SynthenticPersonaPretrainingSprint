@@ -7,8 +7,12 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MODELS=("$TREATMENT_MODEL" "$CONTROL_MODEL")
 KEYS=("$TREATMENT_KEY" "$CONTROL_KEY")
 GPUS=(0 1)
-# 12 probe roles spanning the spectrum: assistant-adjacent -> neutral human -> far-from-assistant.
-PROBE_ROLES=(tutor counselor translator editor accountant architect gamer chef demon ghost oracle trickster)
+# 24 probe roles spanning the spectrum: 8 assistant-adjacent, 8 neutral human, 8 far-from-assistant.
+# The gate estimates a proportion (what fraction of the 275 roles are viable), so sample size drives
+# its error bars: at 12 roles the standard error near p=0.5 is ~14pp, at 24 it's ~10pp. The cost is
+# ~3% of the full run's generations — cheap insurance against a mis-verdict wasting a whole night.
+# Override with e.g. PROBE_ROLES="tutor demon ghost".
+read -r -a PROBE_ROLES <<< "${PROBE_ROLES:-tutor counselor translator editor mentor librarian guide therapist accountant architect gamer chef journalist soldier comedian hermit demon ghost oracle trickster wraith alien golem eldritch}"
 PROBE_QUESTIONS="${PROBE_QUESTIONS:-40}"   # 40 x 5 prompts = 200 responses/role
 
 echo "== 1/5 OpenRouter judge check =="
