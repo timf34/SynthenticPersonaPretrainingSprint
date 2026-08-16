@@ -15,24 +15,9 @@ GPUS=(0 1)
 read -r -a PROBE_ROLES <<< "${PROBE_ROLES:-tutor counselor translator editor mentor librarian guide therapist accountant architect gamer chef journalist soldier comedian hermit demon ghost oracle trickster wraith alien golem eldritch}"
 PROBE_QUESTIONS="${PROBE_QUESTIONS:-40}"   # 40 x 5 prompts = 200 responses/role
 
-echo "== 1/5 OpenRouter judge check =="
-resp=$(curl -sS "$OPENAI_BASE_URL/chat/completions" \
-  -H "Authorization: Bearer $OPENAI_API_KEY" -H "Content-Type: application/json" \
-  -d "{\"model\":\"$JUDGE_MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with the single word: ok\"}],\"max_tokens\":5}")
-echo "$resp" | grep -q '"choices"' || { echo "FATAL: OpenRouter test call failed: $resp" >&2; exit 1; }
-echo "ok"
-
-echo "== 2/5 GPU / disk =="
-nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
-df -h /workspace || true
-
-echo "== 3/5 chat template (SPP models have no system role) =="
-for m in "${MODELS[@]}"; do
-  echo "--- $m ---"
-  uv run --project "$AXIS_DIR" python "$SCRIPTS_DIR/check_chat_template.py" --model "$m"
-done
-
-echo "== 4/5 tiny end-to-end per model =="
+# Cheap environment checks (creds, HF, chat template, GPU, disk) live in scripts/doctor.sh,
+# which run_on_pod.sh runs first. This file only does work that costs real GPU time.
+echo "== 1/2 tiny end-to-end per model =="
 for i in 0 1; do
   m="${MODELS[$i]}"; key="${KEYS[$i]}"; gpu="${GPUS[$i]}"
   out="$EXP_ROOT/preflight/$key"
@@ -48,7 +33,7 @@ print('$key config:', get_config('$m'))"
   head -c 1200 "$out/responses/pirate.jsonl" || true; echo
 done
 
-echo "== 5/5 role-play gate (${#PROBE_ROLES[@]} probe roles x $((PROBE_QUESTIONS*5)) responses) =="
+echo "== 2/2 role-play gate (${#PROBE_ROLES[@]} probe roles x $((PROBE_QUESTIONS*5)) responses) =="
 for i in 0 1; do
   m="${MODELS[$i]}"; key="${KEYS[$i]}"; gpu="${GPUS[$i]}"
   out="$EXP_ROOT/gate/$key"

@@ -15,6 +15,7 @@
 #
 #   SIZE=1.7b bash run_on_pod.sh                  # the smaller family (100B tokens)
 #   QUESTION_COUNT=60 bash run_on_pod.sh          # half scale if the night is short
+#   DOCTOR_ONLY=1 bash run_on_pod.sh              # validate a fresh pod in ~3 min, then exit
 #   SKIP_PREFLIGHT=1 bash run_on_pod.sh           # resume after a crash
 #   FORCE_GO=1 bash run_on_pod.sh                 # run the full pipeline even if the gate says NO-GO
 #   SHUTDOWN=stop SAVE_TO_GIT=1 bash run_on_pod.sh
@@ -28,21 +29,27 @@ export EXP_ROOT="${EXP_ROOT:-/workspace/exp}"
 export PRUNE_ACTIVATIONS="${PRUNE_ACTIVATIONS:-1}"
 source scripts/common.sh
 
-echo "== [1/5] dependencies =="
+echo "== [1/6] dependencies =="
 if ! command -v uv >/dev/null 2>&1; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
   export PATH="$HOME/.local/bin:$PATH"
 fi
 (cd assistant-axis && uv sync)
-if ! (cd assistant-axis && uv run python -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)"); then
-  echo "!! torch cannot use this GPU — driver/CUDA mismatch."
-  nvidia-smi | grep -oE 'CUDA Version: [0-9.]+' || true
+echo "  deps installed"
+
+echo "== [2/6] doctor: fail-fast environment checks =="
+# Every cheap check lives in scripts/doctor.sh so a broken pod is caught in the first minute,
+# not overnight. It prints an explicit "SAFE TO LEAVE IT RUNNING" banner when everything passes.
+if ! bash scripts/doctor.sh; then
+  echo "!! environment checks failed — aborting before any GPU work. Fix the [FAIL] lines above."
   exit 1
 fi
+[[ "${DOCTOR_ONLY:-0}" == "1" ]] && { echo "DOCTOR_ONLY=1 -> stopping after checks."; exit 0; }
+
 command -v tmux >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq tmux; } || true
 echo "  deps OK"
 
-echo "== [2/5] preflight + role-play gate =="
+echo "== [3/6] preflight + role-play gate =="
 if [[ "${SKIP_PREFLIGHT:-0}" != "1" ]]; then
   bash scripts/preflight.sh
 else
@@ -58,7 +65,7 @@ gate_ok() {  # gate_ok <key>
   [[ "$(cat "$f")" != "2" ]]
 }
 
-echo "== [3/5] launching both models in parallel (one per GPU) =="
+echo "== [4/6] launching both models in parallel (one per GPU) =="
 declare -a PIDS=() KEYS=()
 launch() {  # launch <hf_id> <gpu> <key>
   if ! gate_ok "$3"; then
@@ -74,13 +81,13 @@ launch() {  # launch <hf_id> <gpu> <key>
 launch "$TREATMENT_MODEL" 0 "$TREATMENT_KEY"
 launch "$CONTROL_MODEL"   1 "$CONTROL_KEY"
 
-echo "== [4/5] waiting (tail $EXP_ROOT/STATE.md for progress) =="
+echo "== [5/6] waiting (tail $EXP_ROOT/STATE.md for progress) =="
 FAILED=()
 for i in "${!PIDS[@]}"; do
   if wait "${PIDS[$i]}"; then echo "  ${KEYS[$i]}: OK"; else echo "  ${KEYS[$i]}: FAILED"; FAILED+=("${KEYS[$i]}"); fi
 done
 
-echo "== [5/5] treatment vs control comparison =="
+echo "== [6/6] treatment vs control comparison =="
 CMP=()
 for k in "$TREATMENT_KEY" "$CONTROL_KEY"; do
   [[ -d "$EXP_ROOT/$k/release/$k" ]] && CMP+=("$k=$EXP_ROOT/$k/release/$k")

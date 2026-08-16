@@ -30,9 +30,14 @@ Installs deps, preflights, runs the role-play gate, then runs **both models in p
 | `SIZE` | `3b` | `1.7b` for the smaller family |
 | `QUESTION_COUNT` | 120 | 600 responses/role; 60 for a short night, 240 for full paper scale |
 | `MIN_COUNT` | 25 | min score-3 responses per role vector (auto-relaxed to 15 on a PARTIAL gate) |
+| `DOCTOR_ONLY` | 0 | run the cheap environment checks (~3 min) and exit — validate a fresh pod before committing to a night |
 | `SKIP_PREFLIGHT` | 0 | resume after a crash |
 | `FORCE_GO` | 0 | run the full pipeline even if the gate says NO-GO |
 | `SHUTDOWN` / `SAVE_TO_GIT` | – | pause the pod when done / push reports to this repo first |
+
+## Before you walk away
+
+`bash run_on_pod.sh` runs `scripts/doctor.sh` before any GPU work: credentials + a live OpenRouter call, HF downloader flags (auto-installs `hf_transfer`/`hf_xet` or disables them), HF auth, config + tokenizer load for both models, chat-template persona delivery, GPU, and disk. It prints **`ALL ENVIRONMENT CHECKS PASSED — SAFE TO LEAVE IT RUNNING`** when everything is green; until you see that line, stay at the terminal. `DOCTOR_ONLY=1 bash run_on_pod.sh` runs just the checks (~3 min) on a fresh pod.
 
 ## The role-play gate
 
