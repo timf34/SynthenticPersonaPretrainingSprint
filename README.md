@@ -41,7 +41,7 @@ Installs deps, preflights, runs the role-play gate, then runs **both models in p
 
 ## The role-play gate
 
-These are small, lightly post-trained models, so before spending a night we check they can actually *leave* the assistant persona: 12 probe roles (assistant-adjacent → neutral human → demon/ghost/oracle), 200 responses each, judged 0–3. A role is viable if its score-3 rate projects past `min_count` at full scale.
+These are small, lightly post-trained models, so before spending a night we check they can actually *leave* the assistant persona: 24 probe roles (8 assistant-adjacent, 8 neutral human, 8 demon/ghost/oracle-type), 200 responses each, judged 0–3. A role is viable if its score-3 rate projects past `min_count` at full scale.
 
 - **GO** (≥70% viable) → full pipeline
 - **PARTIAL** (30–70%) → full pipeline with a relaxed `min_count`
@@ -70,7 +70,7 @@ Comparisons are **per-model metrics only** — the two models have different act
 ## Layout
 
 - `run_on_pod.sh` — one-shot entry point
-- `scripts/` — `preflight.sh` (judge check, chat template, tiny e2e, role-play gate), `roleplay_gate.py`, `check_chat_template.py`, `supervisor.sh`, `run_model.sh`, `package_release.py`, `analyze_axis.py`, `upload_results.py`
+- `scripts/` — `doctor.sh` (fail-fast env checks), `preflight.sh` (tiny e2e + role-play gate), `roleplay_gate.py`, `check_chat_template.py`, `supervisor.sh`, `run_model.sh`, `package_release.py`, `analyze_axis.py`, `upload_results.py`
 - `assistant-axis/` — vendored pipeline (provenance + local patches in `assistant-axis/UPSTREAM.md`, paper in `og-paper.md`)
 - `roles_90.json` — 90-persona subset shared with the Gemma track (full 275 roles are used for the run itself)
 - `runpod_claude_code_prompt.md` — earlier agent-driven version of this experiment, superseded by the scripts above; still the reference for the full five-recipe sweep
