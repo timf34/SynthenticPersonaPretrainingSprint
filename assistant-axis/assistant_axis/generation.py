@@ -15,6 +15,7 @@ Example (vLLM - batch inference):
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import List, Dict, Optional
 
@@ -97,6 +98,13 @@ def format_conversation(
     Returns:
         List of message dicts for the conversation
     """
+    # LOCAL PATCH (see UPSTREAM.md): the SPP models' chat template has no system role, but some
+    # templates silently render an unsupported system turn — auto-detection then takes the system
+    # path and the persona instruction is effectively ignored. Setting
+    # ASSISTANT_AXIS_FORCE_USER_CONCAT=1 forces the concatenation path for such models.
+    if os.environ.get("ASSISTANT_AXIS_FORCE_USER_CONCAT") == "1":
+        return [{"role": "user", "content": f"{instruction}\n\n{question}" if instruction else question}]
+
     # Check system prompt support by testing the chat template
     test_message = "__SYSTEM_TEST__"
     test_conversation = [
