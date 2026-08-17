@@ -19,7 +19,11 @@ BATCH_SIZE="${BATCH_SIZE:-32}"            # activation extraction batch (3B mode
 JUDGE_MODEL="${JUDGE_MODEL:-openai/gpt-4.1-mini}"   # OpenRouter model id — NOT the bare openai name
 JUDGE_BATCH="${JUDGE_BATCH:-200}"
 JUDGE_RPS="${JUDGE_RPS:-250}"
-PRUNE_ACTIVATIONS="${PRUNE_ACTIVATIONS:-1}"
+PRUNE_ACTIVATIONS="${PRUNE_ACTIVATIONS:-0}"  # default OFF: activations are uploaded (below) and only
+                                          # deleted if you explicitly ask. A prune-by-default once destroyed
+                                          # a run's activations minutes before the user tried to save them.
+ACTIVATIONS_REPO="${ACTIVATIONS_REPO:-timf34/spp-assistant-axis-activations}"  # separate public dataset: 57-220GB/model
+UPLOAD_ACTIVATIONS="${UPLOAD_ACTIVATIONS:-1}"  # push raw activations there after vectors are done
 HF_RESULTS_REPO="${HF_RESULTS_REPO:-timf34/spp-assistant-axis-results}"
 
 # These models' chat template has no system role. Persona instructions must be concatenated into

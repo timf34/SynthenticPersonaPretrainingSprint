@@ -26,7 +26,7 @@ export QUESTION_COUNT="${QUESTION_COUNT:-120}"
 export MIN_COUNT="${MIN_COUNT:-25}"
 export BATCH_SIZE="${BATCH_SIZE:-32}"
 export EXP_ROOT="${EXP_ROOT:-/workspace/exp}"
-export PRUNE_ACTIVATIONS="${PRUNE_ACTIVATIONS:-1}"
+export PRUNE_ACTIVATIONS="${PRUNE_ACTIVATIONS:-0}"   # keep raw activations (uploaded to a separate public dataset); 1 = delete after upload
 source scripts/common.sh
 
 echo "== [1/6] dependencies =="
