@@ -72,6 +72,15 @@ python scripts/roleplay_stats.py \
   --out /workspace/exp/ROLEPLAY.md
 ```
 
+**Raw transcripts are NOT uploaded by default** (they are bulky and the pipeline's upload targets vectors and reports). They live on the pod at `/workspace/exp/<key>/responses/`, so archive them before terminating a pod — they are the qualitative half of the result, showing *how* a model declines to fully become a character:
+
+```bash
+python scripts/archive_responses.py --key t0-mt-3b  --include-gate --upload
+python scripts/archive_responses.py --key vanilla-3b --include-gate --upload
+```
+
+That writes one gzipped JSONL per model with each response joined to its judge score, and uploads it to the HF results dataset.
+
 **Integrity check:** every run reports `cos(default − mean(saved role vectors), axis)`, which must be **1.000** — proof the axis was built from exactly the saved vector set.
 
 Comparisons are **per-model metrics only** — the two models have different activation spaces, so raw directions are never compared across them.
