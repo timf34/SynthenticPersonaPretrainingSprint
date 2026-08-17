@@ -35,6 +35,21 @@ Installs deps, preflights, runs the role-play gate, then runs **both models in p
 | `FORCE_GO` | 0 | run the full pipeline even if the gate says NO-GO |
 | `SHUTDOWN` / `SAVE_TO_GIT` | – | pause the pod when done / push reports to this repo first |
 
+## Storage policy: everything public, nothing only-on-the-pod
+
+Results go to the **public** HF dataset `timf34/spp-assistant-axis-results` (`HF_PRIVATE=1` to override). Private HF repos share a
+small LFS storage quota, and a 403 from that quota is what stopped an earlier run's `.pt` tensors from
+ever being backed up. What is preserved per model:
+
+| artifact | where | how |
+|---|---|---|
+| vectors: `assistant_axis.pt`, `default_vector.pt`, `role_vectors/*.pt` | HF | automatic (`upload_results.py`) |
+| judge scores, reports, plots, `summary.json`, logs | HF + git (`results/`) | automatic |
+| raw transcripts joined to scores (`responses_<key>.jsonl.gz`) | HF | **manual**: `scripts/archive_responses.py --upload` |
+| raw activations | nowhere | deliberately not kept: ~57–220GB/model and exactly reproducible from the transcripts with ~25 min of GPU and no judge cost |
+
+Run the archive step before terminating any pod. `SHUTDOWN=stop` keeps the disk, so a missed archive is recoverable; `terminate` is not.
+
 ## Cost discipline: GPUs only for GPU work
 
 Only steps 1 (generate) and 2 (activations) need a GPU. The judge is API traffic and everything after
@@ -83,7 +98,7 @@ Per model, in the same layout as the paper's HF release (`lu-christina/assistant
 <key>/role_vectors/<role>.pt   (n_layers, hidden)   — every role passing the judge filter
 ```
 
-Plus per-model `RESULTS.md` (PC1↔axis cosine, variance explained, default separation, ranked role projections, layer sweep), plots, and a top-level `COMPARISON.md` (treatment vs control metrics + role-play gate rates). Everything but raw activations is uploaded to the private HF dataset `timf34/spp-assistant-axis-results`.
+Plus per-model `RESULTS.md` (PC1↔axis cosine, variance explained, default separation, ranked role projections, layer sweep), plots, and a top-level `COMPARISON.md` (treatment vs control metrics + role-play gate rates). Everything but raw activations is uploaded to the **public** HF dataset `timf34/spp-assistant-axis-results`.
 
 **Full-run role-play comparison:** the gate's numbers come from 24 probe roles; after the run, `scripts/roleplay_stats.py` recomputes the same comparison from every judged response (275 roles × 600 = ~165k per model) with a paired test over roles:
 
