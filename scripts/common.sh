@@ -17,8 +17,8 @@ QUESTION_COUNT="${QUESTION_COUNT:-120}"   # 120 -> 600 responses/role
 MIN_COUNT="${MIN_COUNT:-25}"              # min score-3 responses per role vector (paper ratio ~4%)
 BATCH_SIZE="${BATCH_SIZE:-32}"            # activation extraction batch (3B models: 32 is safe on 80GB)
 JUDGE_MODEL="${JUDGE_MODEL:-openai/gpt-4.1-mini}"   # OpenRouter model id — NOT the bare openai name
-JUDGE_BATCH="${JUDGE_BATCH:-50}"
-JUDGE_RPS="${JUDGE_RPS:-60}"
+JUDGE_BATCH="${JUDGE_BATCH:-200}"
+JUDGE_RPS="${JUDGE_RPS:-250}"
 PRUNE_ACTIVATIONS="${PRUNE_ACTIVATIONS:-1}"
 HF_RESULTS_REPO="${HF_RESULTS_REPO:-timf34/spp-assistant-axis-results}"
 

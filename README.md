@@ -35,6 +35,28 @@ Installs deps, preflights, runs the role-play gate, then runs **both models in p
 | `FORCE_GO` | 0 | run the full pipeline even if the gate says NO-GO |
 | `SHUTDOWN` / `SAVE_TO_GIT` | – | pause the pod when done / push reports to this repo first |
 
+## Cost discipline: GPUs only for GPU work
+
+Only steps 1 (generate) and 2 (activations) need a GPU. The judge is API traffic and everything after
+it is numpy — on a 3B pair the GPU phase is ~45 minutes while the judge can run for hours, so a
+naive single-pod run bills expensive cards to sit idle.
+
+Two mitigations are built in:
+
+- **The judge is parallel by default** (`JUDGE_BATCH=200`, `JUDGE_RPS=250`). Lower them if OpenRouter
+  returns 429s; raise them if it keeps up.
+- **`scripts/finish_cpu.sh` runs everything after activations without a GPU.** Once `STATE.md` shows
+  `activations: done`, you can stop the pod, pull the run down, and finish on a laptop:
+
+  ```bash
+  rsync -avP root@<POD>:/workspace/exp/t0-mt-3b ./exp/
+  EXP_ROOT=./exp bash scripts/finish_cpu.sh t0-mt-3b
+  ```
+
+  Note the trade-off: the vectors step needs `activations/`, which is the bulky artifact. Compare the
+  download size against the GPU-hours saved before moving — for a small model that finishes in an hour
+  it is usually not worth it; for a long judge tail it is.
+
 ## Before you walk away
 
 `bash run_on_pod.sh` runs `scripts/doctor.sh` before any GPU work: credentials + a live OpenRouter call, HF downloader flags (auto-installs `hf_transfer`/`hf_xet` or disables them), HF auth, config + tokenizer load for both models, chat-template persona delivery, GPU, and disk. It prints **`ALL ENVIRONMENT CHECKS PASSED — SAFE TO LEAVE IT RUNNING`** when everything is green; until you see that line, stay at the terminal. `DOCTOR_ONLY=1 bash run_on_pod.sh` runs just the checks (~3 min) on a fresh pod.
