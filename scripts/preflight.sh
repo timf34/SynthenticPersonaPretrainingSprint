@@ -6,7 +6,10 @@ SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 MODELS=("$TREATMENT_MODEL" "$CONTROL_MODEL")
 KEYS=("$TREATMENT_KEY" "$CONTROL_KEY")
-GPUS=(0 1)
+# Map both models onto whatever GPUs exist (a 1-GPU pod previously crashed vLLM here).
+NGPU=$(nvidia-smi --list-gpus 2>/dev/null | wc -l)
+[[ "$NGPU" -ge 1 ]] || { echo "FATAL: no GPUs visible" >&2; exit 1; }
+GPUS=(0 $(( NGPU >= 2 ? 1 : 0 )))
 # 24 probe roles spanning the spectrum: 8 assistant-adjacent, 8 neutral human, 8 far-from-assistant.
 # The gate estimates a proportion (what fraction of the 275 roles are viable), so sample size drives
 # its error bars: at 12 roles the standard error near p=0.5 is ~14pp, at 24 it's ~10pp. The cost is

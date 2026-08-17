@@ -65,8 +65,19 @@ gate_ok() {  # gate_ok <key>
   [[ "$(cat "$f")" != "2" ]]
 }
 
-echo "== [4/6] launching both models in parallel (one per GPU) =="
-declare -a PIDS=() KEYS=()
+# How many GPUs do we actually have? Never assume 2 — a single-GPU pod made vLLM fail with
+# NVMLError_InvalidArgument because CUDA_VISIBLE_DEVICES pointed at a device that did not exist.
+NGPU=$(nvidia-smi --list-gpus 2>/dev/null | wc -l)
+[[ "$NGPU" -ge 1 ]] || { echo "!! no GPUs visible"; exit 1; }
+if [[ "$NGPU" -ge 2 ]]; then
+  echo "== [4/6] $NGPU GPUs: running both models IN PARALLEL, one per GPU =="
+  PARALLEL=1
+else
+  echo "== [4/6] 1 GPU: running the two models SEQUENTIALLY on GPU 0 (roughly 2x wall-clock) =="
+  PARALLEL=0
+fi
+
+declare -a PIDS=() KEYS=() FAILED=()
 launch() {  # launch <hf_id> <gpu> <key>
   if ! gate_ok "$3"; then
     echo "  !! $3: gate verdict NO-GO — skipping full pipeline (see $EXP_ROOT/gate_$3.md)."
@@ -76,13 +87,18 @@ launch() {  # launch <hf_id> <gpu> <key>
   fi
   echo "  $3: $1 on GPU $2  (log: $EXP_ROOT/$3/logs/)"
   bash scripts/supervisor.sh "$1" "$2" "$3" > "$EXP_ROOT/$3.supervisor.log" 2>&1 &
-  PIDS+=($!); KEYS+=("$3")
+  local pid=$!
+  if [[ "$PARALLEL" == "1" ]]; then
+    PIDS+=("$pid"); KEYS+=("$3")
+  else
+    # One GPU: finish this model before starting the next, so they never contend for memory.
+    if wait "$pid"; then echo "  $3: OK"; else echo "  $3: FAILED"; FAILED+=("$3"); fi
+  fi
 }
 launch "$TREATMENT_MODEL" 0 "$TREATMENT_KEY"
-launch "$CONTROL_MODEL"   1 "$CONTROL_KEY"
+launch "$CONTROL_MODEL"   $(( NGPU >= 2 ? 1 : 0 )) "$CONTROL_KEY"
 
 echo "== [5/6] waiting (tail $EXP_ROOT/STATE.md for progress) =="
-FAILED=()
 for i in "${!PIDS[@]}"; do
   if wait "${PIDS[$i]}"; then echo "  ${KEYS[$i]}: OK"; else echo "  ${KEYS[$i]}: FAILED"; FAILED+=("${KEYS[$i]}"); fi
 done
