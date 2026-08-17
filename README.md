@@ -63,6 +63,15 @@ Per model, in the same layout as the paper's HF release (`lu-christina/assistant
 
 Plus per-model `RESULTS.md` (PC1↔axis cosine, variance explained, default separation, ranked role projections, layer sweep), plots, and a top-level `COMPARISON.md` (treatment vs control metrics + role-play gate rates). Everything but raw activations is uploaded to the private HF dataset `timf34/spp-assistant-axis-results`.
 
+**Full-run role-play comparison:** the gate's numbers come from 24 probe roles; after the run, `scripts/roleplay_stats.py` recomputes the same comparison from every judged response (275 roles × 600 = ~165k per model) with a paired test over roles:
+
+```bash
+python scripts/roleplay_stats.py \
+  --scores t0-mt-3b=/workspace/exp/t0-mt-3b/scores \
+  --scores vanilla-3b=/workspace/exp/vanilla-3b/scores \
+  --out /workspace/exp/ROLEPLAY.md
+```
+
 **Integrity check:** every run reports `cos(default − mean(saved role vectors), axis)`, which must be **1.000** — proof the axis was built from exactly the saved vector set.
 
 Comparisons are **per-model metrics only** — the two models have different activation spaces, so raw directions are never compared across them.
@@ -70,7 +79,7 @@ Comparisons are **per-model metrics only** — the two models have different act
 ## Layout
 
 - `run_on_pod.sh` — one-shot entry point
-- `scripts/` — `doctor.sh` (fail-fast env checks), `preflight.sh` (tiny e2e + role-play gate), `roleplay_gate.py`, `check_chat_template.py`, `supervisor.sh`, `run_model.sh`, `package_release.py`, `analyze_axis.py`, `upload_results.py`
+- `scripts/` — `doctor.sh` (fail-fast env checks), `preflight.sh` (tiny e2e + role-play gate), `roleplay_gate.py`, `roleplay_stats.py` (full-run role-play comparison), `check_chat_template.py`, `supervisor.sh`, `run_model.sh`, `package_release.py`, `analyze_axis.py`, `upload_results.py`
 - `assistant-axis/` — vendored pipeline (provenance + local patches in `assistant-axis/UPSTREAM.md`, paper in `og-paper.md`)
 - `roles_90.json` — 90-persona subset shared with the Gemma track (full 275 roles are used for the run itself)
 - `runpod_claude_code_prompt.md` — earlier agent-driven version of this experiment, superseded by the scripts above; still the reference for the full five-recipe sweep
