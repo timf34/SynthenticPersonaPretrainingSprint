@@ -56,4 +56,6 @@ if [[ ! -f "$AXIS_DIR/.env" && -f "$REPO_DIR/.env" ]]; then
 fi
 
 mkdir -p "$EXP_ROOT"
+# If step 0 enabled CUDA forward-compat, every step needs the same LD_LIBRARY_PATH.
+[[ -f "$EXP_ROOT/.cuda_compat.env" ]] && source "$EXP_ROOT/.cuda_compat.env"
 state() { echo "$(date -u +%FT%TZ)  $*" >> "$EXP_ROOT/STATE.md"; }
