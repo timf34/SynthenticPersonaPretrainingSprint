@@ -37,6 +37,13 @@ Installs deps, preflights, runs the role-play gate, then runs **both models in p
 
 ## Storage policy: everything public, nothing only-on-the-pod
 
+**The experiment directory is inside the repo at `exp/`** (`EXP_ROOT` defaults to `<repo>/exp`), so every small
+artifact — plots, `RESULTS.md`, `COMPARISON.md`, `summary.json`, judge scores, gate tables, logs — is committed
+wholesale by `SAVE_TO_GIT=1`. `.gitignore` excludes only the bulky binaries (`activations/`, `responses/`,
+`vectors/`, `release/`, `*.pt`, `*.jsonl*`), which go to the HF datasets instead. Nothing small is ever left
+behind on a pod again.
+
+
 Results go to the **public** HF dataset `timf34/spp-assistant-axis-results` (`HF_PRIVATE=1` to override). Private HF repos share a
 small LFS storage quota, and a 403 from that quota is what stopped an earlier run's `.pt` tensors from
 ever being backed up. What is preserved per model:

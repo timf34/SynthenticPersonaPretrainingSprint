@@ -25,7 +25,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 export QUESTION_COUNT="${QUESTION_COUNT:-120}"
 export MIN_COUNT="${MIN_COUNT:-25}"
 export BATCH_SIZE="${BATCH_SIZE:-32}"
-export EXP_ROOT="${EXP_ROOT:-/workspace/exp}"
+export EXP_ROOT="${EXP_ROOT:-$(pwd)/exp}"   # INSIDE the repo, so small artifacts are git-tracked
 export PRUNE_ACTIVATIONS="${PRUNE_ACTIVATIONS:-0}"   # keep raw activations (uploaded to a separate public dataset); 1 = delete after upload
 source scripts/common.sh
 
@@ -190,16 +190,14 @@ case "${SHUTDOWN:-}" in
 esac
 
 if [[ "${SAVE_TO_GIT:-0}" == "1" ]]; then
-  echo "== saving reports to git =="
-  mkdir -p results
-  for k in "$TREATMENT_KEY" "$CONTROL_KEY"; do
-    [[ -d "$EXP_ROOT/$k" ]] || continue
-    mkdir -p "results/$k"
-    cp -f "$EXP_ROOT/$k"/{RESULTS.md,summary.json} "results/$k/" 2>/dev/null || true
-    cp -f "$EXP_ROOT/$k"/*.png "results/$k/" 2>/dev/null || true
-  done
-  cp -f "$EXP_ROOT"/COMPARISON.md "$EXP_ROOT"/STATE.md "$EXP_ROOT"/gate_*.md results/ 2>/dev/null || true
-  git add -f results/ 2>/dev/null || true
+  echo "== saving experiment artifacts to git =="
+  # exp/ lives inside the repo; .gitignore excludes only the bulky binaries (activations, responses,
+  # vectors, .pt) which go to HF. Everything else — plots, reports, scores, gate tables, comparison,
+  # logs — is committed wholesale, so nothing small is ever left behind on the pod.
+  git add -A exp/ 2>/dev/null || true
+  # legacy layout: also keep results/ populated for anything reading the old path
+  mkdir -p results && cp -rf exp/COMPARISON.md exp/STATE.md results/ 2>/dev/null || true
+  git add -A results/ 2>/dev/null || true
   git -c user.name="spp-axis-pod" -c user.email="pod@spp-axis.local" \
     commit -q -m "results: run finished $(date -u +%FT%TZ)" || echo "  (nothing new to commit)"
   git pull --no-rebase --no-edit 2>/dev/null || true

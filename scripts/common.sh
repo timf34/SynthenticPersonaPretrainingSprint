@@ -2,7 +2,7 @@
 # Shared config. Override anything via environment variables.
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 AXIS_DIR="$REPO_DIR/assistant-axis"
-EXP_ROOT="${EXP_ROOT:-/workspace/exp}"
+EXP_ROOT="${EXP_ROOT:-$REPO_DIR/exp}"
 
 # The comparison pair: max-persona-pretraining vs the no-injection control.
 # Same architecture, tokenizer, and SFT — pretraining recipe is the only variable.
