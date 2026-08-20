@@ -97,33 +97,30 @@ def main():
         ax.annotate("", xy=(v[0], v[1]), xytext=(0, 0),
                     arrowprops=dict(arrowstyle="-|>", color="#1c2230", lw=1.6), zorder=6)
         ax.annotate("assistant axis", (v[0], v[1]), xytext=(6, 4), textcoords="offset points",
-                    fontsize=9, fontstyle="italic", color="#1c2230", zorder=6)
+                    fontsize=10, fontstyle="italic", color="#1c2230", zorder=6)
         ax.scatter([pd["pdef"][0]], [pd["pdef"][1]], s=210, marker="*", c="#1c2230",
                    edgecolors="#fcfcfb", linewidths=0.8, zorder=7)
         ax.annotate("default", (pd["pdef"][0], pd["pdef"][1]), xytext=(7, -11),
                     textcoords="offset points", fontsize=8.5, fontweight="bold", zorder=7)
-        # labels: PC1/PC2 extremes + all assistant-adjacent + a few interest roles
-        to_label = set(np.argsort(P[:, 0])[:9]) | set(np.argsort(P[:, 0])[-9:]) \
-                 | set(np.argsort(P[:, 1])[:6]) | set(np.argsort(P[:, 1])[-6:]) \
-                 | {i for i, c in enumerate(cats) if c == "assistant_adjacent"} \
-                 | {i for i, n in enumerate(names) if n in ("robot", "tulpa", "pirate", "demon", "poet")}
-        for i in to_label:
-            ax.annotate(names[i], (P[i, 0], P[i, 1]), xytext=(4, 3), textcoords="offset points",
-                        fontsize=6.4, color="#52514e", zorder=5)
+        # label only a handful of iconic personas
+        PICK = {"poet", "leviathan", "ghost", "tree", "therapist", "counselor", "widow",
+                "coach", "mentor", "assistant", "planner", "tutor", "robot", "pirate", "demon"}
+        for i, n in enumerate(names):
+            if n in PICK:
+                ax.annotate(n, (P[i, 0], P[i, 1]), xytext=(4, 3), textcoords="offset points",
+                            fontsize=8, color="#52514e", zorder=5)
         ax.axhline(0, color="#e3e6ec", lw=0.8, zorder=1); ax.axvline(0, color="#e3e6ec", lw=0.8, zorder=1)
-        ax.set_xlabel(f"PC1 ({pd['var'][0]:.1%} var)   →  more assistant-like", fontsize=10)
-        ax.set_ylabel(f"PC2 ({pd['var'][1]:.1%} var)", fontsize=10)
-        ax.set_title(f"{key}   —   |cos(PC1, axis)| {pd['cos1']:.3f}, {len(names)} roles + default, layer {args.layer}",
-                     fontsize=11, loc="left", fontfamily="monospace")
+        ax.set_xlabel("PC1  →  more assistant-like", fontsize=11)
+        ax.set_ylabel("PC2", fontsize=11)
+        ax.set_title(f"{key}  ({len(names)} personas)", fontsize=12, loc="left", fontfamily="monospace")
+        ax.set_xticks([]); ax.set_yticks([])
         for s in ("top", "right"):
             ax.spines[s].set_visible(False)
     handles = [Line2D([0], [0], marker="o", color="w", markerfacecolor=c, markersize=8, label=LABELS[k])
                for k, c in COLORS.items()]
     handles.append(Line2D([0], [0], marker="*", color="w", markerfacecolor="#1c2230", markersize=13, label="default persona"))
     fig.legend(handles=handles, loc="lower center", ncol=5, frameon=False, fontsize=9, bbox_to_anchor=(0.5, -0.01))
-    fig.suptitle("Persona space per model (each panel its own PCA on z-scored role vectors; PC signs matched across panels)",
-                 fontsize=12.5, x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0.03, 1, 0.95))
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
     fig.savefig(args.out, dpi=170, bbox_inches="tight", facecolor=fig.get_facecolor())
     print("wrote", args.out)
     # cross-panel loading correlations for the caption

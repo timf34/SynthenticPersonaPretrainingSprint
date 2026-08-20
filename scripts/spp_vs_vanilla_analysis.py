@@ -194,14 +194,12 @@ def main():
     ax.annotate("default (vanilla)", (zda[1], zda[0]), xytext=(7, 5), textcoords="offset points", fontsize=8, fontweight="bold")
     ax.annotate("default (SPP)", (zdb[1], zdb[0]), xytext=(7, -11), textcoords="offset points", fontsize=8, fontweight="bold", color="#c0392b")
     order = np.argsort(resid)
-    for i in list(order[-10:]) + list(order[:5]):
+    for i in list(order[-7:]) + list(order[:3]):
         ax.annotate(shared[i], (Zb[i, 1], Zb[i, 0]), xytext=(4, 3), textcoords="offset points", fontsize=6.5, color="#52514e")
-    ax.set_xlabel("PC2 of the aligned union", fontsize=10)
-    ax.set_ylabel("PC1 of the aligned union   →  more assistant-like", fontsize=10)
-    ax.set_title(f"(a) Persona movement after optimal alignment (layer {L}) — ● vanilla → ◇ SPP\n"
-                 f"Procrustes disparity {M['procrustes_disparity']:.2f}: only {M['procrustes_disparity']:.0%} of variance "
-                 "is not explained by a rigid rotation between the two pretraining runs",
-                 fontsize=10, loc="left")
+    ax.set_xlabel("PC2", fontsize=11)
+    ax.set_ylabel("PC1  →  more assistant-like", fontsize=11)
+    ax.set_xticks([]); ax.set_yticks([])
+    ax.set_title("(a) Persona movement (dot = vanilla, diamond = SPP)", fontsize=11.5, loc="left")
     handles = [Line2D([0], [0], marker="o", color="w", markerfacecolor=c, markersize=8, label=cat) for cat, c in COLORS.items()]
     ax.legend(handles=handles, loc="lower left", frameon=False, fontsize=8)
 
@@ -219,15 +217,15 @@ def main():
     ax2.text(np.median(resid), ys[0] + 1.2, " median role", fontsize=8, color="#52514e")
     ax2.axvline(M["default_resid"], color="#c0392b", lw=1.2, ls=":")
     ax2.text(M["default_resid"], ys[-1] - 1.4, " default persona", fontsize=8, color="#c0392b")
-    ax2.set_xlabel("residual displacement after alignment (z-scored units)", fontsize=9)
-    ax2.set_title("(b) Most / least moved personas\n(top: most displaced — bottom block: most conserved)",
-                  fontsize=10, loc="left")
+    ax2.set_xlabel("movement after alignment", fontsize=10)
+    ax2.set_xticks([])
+    ax2.set_title("(b) Most and least moved personas", fontsize=11.5, loc="left")
     for a in (ax, ax2):
         for sp in ("top", "right"):
             a.spines[sp].set_visible(False)
-    fig.suptitle("Synthetic persona pretraining barely moves the persona landscape — and what moves is not the assistant",
-                 fontsize=12.5, x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.suptitle("Synthetic persona pretraining barely moves the persona landscape",
+                 fontsize=13, x=0.01, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
     fig.savefig(figdir / "spp_persona_movement.png", dpi=170, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close(fig)
 
